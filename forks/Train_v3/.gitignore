@@ -1,0 +1,12 @@
+Abaqus_OUT/
+training_checkpoints/*.pt
+training_checkpoints/*.pth
+training_checkpoints_position/*.pt
+training_checkpoints_position/*.pth
+Prediction_OUT/
+logs_position/
+__pycache__/
+*.zip
+_chmap_check.png
+eval_run.log
+notebook_train_p2i_colab.ipynb
