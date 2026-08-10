@@ -26,11 +26,11 @@ def repo_root(start: Path | None = None) -> Path:
 
 
 def default_data_dir(start: Path | None = None) -> Path:
-    """Abaqus dataset root: ``P2I_DATA_DIR`` or ``<repo>/data/Abaqus_OUT``."""
+    """Impact dataset root: ``P2I_DATA_DIR`` or ``<repo>/data/impact_dataset``."""
     env = os.environ.get("P2I_DATA_DIR")
     if env:
         return Path(env).expanduser().resolve()
-    return repo_root(start) / "data" / "Abaqus_OUT"
+    return repo_root(start) / "data" / "impact_dataset"
 
 
 def checkpoint_dir(start: Path | None = None) -> Path:

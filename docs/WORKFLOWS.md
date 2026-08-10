@@ -12,7 +12,7 @@ pip install -r requirements.txt
 pip install -e .
 ```
 
-Place the Abaqus export at `data/Abaqus_OUT/` (see [data/README.md](../data/README.md)) or set `P2I_DATA_DIR`.
+Place the dataset at `data/impact_dataset/` (see [data/README.md](../data/README.md)) or set `P2I_DATA_DIR`.
 
 Trained weights are **not** in git. Train locally or point `--model_path` at your checkpoint.
 
@@ -68,7 +68,7 @@ Custom data / weights:
 
 ```bash
 python scripts/evaluate.py --num_samples 50 ^
-  --data_dir path\to\Abaqus_OUT ^
+  --data_dir path\to\impact_dataset ^
   --model_path training_checkpoints\cGAN_generator.pth
 ```
 
@@ -106,7 +106,7 @@ Outputs under `results/analysis/`.
 
 ## 6. Notebook
 
-`notebooks/train_p2i.ipynb` is a Colab-oriented helper. For local work prefer `scripts/train.py` with `./data/Abaqus_OUT`.
+`notebooks/train_p2i.ipynb` is a Colab-oriented helper. For local work prefer `scripts/train.py` with `./data/impact_dataset`.
 
 ---
 
@@ -114,7 +114,7 @@ Outputs under `results/analysis/`.
 
 | Variable | Effect |
 |----------|--------|
-| `P2I_DATA_DIR` | Root of `results_master.csv` + `RUN_*` folders |
+| `P2I_DATA_DIR` | Root of `impact_dataset` (`results_master.csv` + `RUN_*` folders) |
 
 ---
 

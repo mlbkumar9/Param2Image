@@ -624,7 +624,7 @@ def evaluate_model(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Evaluate Param2Image cGAN model (Train_v2)')
     parser.add_argument('--data_dir', type=str, default=None,
-                        help='Path to Abaqus_OUT directory (default: auto-detect)')
+                        help='Path to impact_dataset directory (default: auto-detect)')
     parser.add_argument('--model_path', type=str, default=None,
                         help='Path to generator model (default: training_checkpoints/cGAN_generator.pth)')
     parser.add_argument('--scaler_path', type=str, default=None,

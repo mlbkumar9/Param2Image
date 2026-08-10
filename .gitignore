@@ -64,13 +64,16 @@ Comparison_OUT/
 Analysis_Results/
 Prediction_OUT/
 
-# Data (external; place under data/Abaqus_OUT locally)
+# Data: track impact_dataset (CSV + images); ignore solver logs
 data/*
 !data/.gitkeep
 !data/README.md
+!data/impact_dataset/
+!data/impact_dataset/**
+data/impact_dataset/**/*.log
 **/Abaqus_OUT/
 
-# Large binaries / dumps
+# Large binaries / dumps (dataset PNGs are under data/impact_dataset and tracked)
 *.pdf
 *.svg
 *.eps
@@ -100,9 +103,3 @@ Documentation/
 # Manim render outputs / local animation trees
 **/Manim_Animation/media/
 extras/Manim_Animation/
-
-# Abaqus_PS local dataset (keep README only)
-!data/Abaqus_PS/
-!data/Abaqus_PS/README.md
-data/Abaqus_PS/**
-!data/Abaqus_PS/README.md

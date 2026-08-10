@@ -1,9 +1,9 @@
 # Dataset layout
 
-Place (or symlink) your Abaqus export under this directory:
+Training and inference read from:
 
 ```text
-data/Abaqus_OUT/
+data/impact_dataset/
   results_master.csv
   RUN_001/
     ...
@@ -31,17 +31,10 @@ Override the default path with:
 
 ```bash
 # PowerShell
-$env:P2I_DATA_DIR = "X:\path\to\Abaqus_OUT"
+$env:P2I_DATA_DIR = "X:\path\to\impact_dataset"
 
 # bash
-export P2I_DATA_DIR=/path/to/Abaqus_OUT
+export P2I_DATA_DIR=/path/to/impact_dataset
 ```
 
-Simulation images and CSVs are **not** shipped in this repository.
-
-## Abaqus_PS vs Abaqus_OUT
-
-- data/Abaqus_OUT/: preferred flat location for training/inference (RUN_* folders + tables). Point P2I_DATA_DIR here, or rely on p2i.paths.default_data_dir().
-- data/Abaqus_PS/: full parametric-study tree (autorun scripts + nested Abaqus_OUT/). Local-only; only data/Abaqus_PS/README.md is tracked. See that README for layout.
-
-You may symlink or copy Abaqus_PS/Abaqus_OUT to data/Abaqus_OUT if you want the package defaults to find the data without env vars.
+`data/impact_dataset/` is shipped with this repository (CSV + images). Solver log files are ignored by git.

@@ -48,7 +48,7 @@ The diagram below is the product path from Abaqus exports through training to a 
 
 ```mermaid
 flowchart TB
-  dataLoad["Load results_master.csv + after-images<br/>from data/Abaqus_OUT"]
+  dataLoad["Load results_master.csv + after-images<br/>from data/impact_dataset"]
   prep["Fit/apply ImpactTabularScaler<br/>params: z-score<br/>outputs: log1p then z-score<br/>images: 512x512 RGBA to -1..1"]
   dataLoad --> prep
 
@@ -158,7 +158,7 @@ Project_19/
 │   └── analyze_cpu.py
 ├── notebooks/
 │   └── train_p2i.ipynb
-├── data/                     # place Abaqus_OUT here (not in git)
+├── data/                     # impact_dataset (CSV + images)
 ├── training_checkpoints/     # weights written here (not in git)
 └── results/                  # evaluation | comparison | analysis | predictions
 ```
@@ -166,7 +166,7 @@ Project_19/
 ## Dataset
 
 ```text
-data/Abaqus_OUT/
+data/impact_dataset/
   results_master.csv
   RUN_001/
   RUN_002/

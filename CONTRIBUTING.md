@@ -9,8 +9,8 @@ This repository contains the `p2i` package, training/inference CLIs, preprocessi
 ## Guidelines
 
 1. Keep PRs focused: package code, scripts, docs, tests, or lightweight CI, not trained weights or result dumps.
-2. Do **not** commit `*.pth` / `*.pt`, or contents of `results/`, `logs/`, or `data/Abaqus_OUT/`.
-3. Prefer repo-relative defaults (`./data/Abaqus_OUT`, `P2I_DATA_DIR`) over hard-coded machine paths.
+2. Do **not** commit `*.pth` / `*.pt`, or contents of `results/` or `logs/`. Dataset images/CSV live under `data/impact_dataset/` (solver `*.log` files stay gitignored).
+3. Prefer repo-relative defaults (`./data/impact_dataset`, `P2I_DATA_DIR`) over hard-coded machine paths.
 4. Import from `p2i` after `pip install -e .`; avoid `sys.path` hacks.
 5. Match existing Python style; avoid drive-by refactors.
 6. Open an issue for large design changes before implementing them.
@@ -25,4 +25,4 @@ python scripts/evaluate.py --help
 python scripts/compare.py --help
 ```
 
-GPU and full `Abaqus_OUT` data are not required for syntax checks.
+GPU is not required for syntax checks.
