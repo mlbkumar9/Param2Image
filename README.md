@@ -44,58 +44,52 @@ With \(\mathbf{p}=(v,r,x,y)^\top\) and latent noise \(\mathbf{z}\sim\mathcal{N}(
 
 ### End-to-end workflow
 
-The diagram below is the complete product path from Abaqus exports through training to a saved prediction. Training and inference share the same scaler statistics and generator weights.
+The diagram below is the product path from Abaqus exports through training to a saved prediction. Training and inference share the same scaler statistics and generator weights. Solid arrows are the main data path; dashed arrows mark optional evaluation and the handoff into inference.
 
 ```mermaid
 flowchart TB
-  subgraph S1 [1. Dataset and preprocessing]
-    CSV["results_master.csv<br/>v, r, x, y + Mises, PEEQ, deflection"]
-    IMGS["RUN_* after-images"]
-    FIT["Fit ImpactTabularScaler<br/>z-score params<br/>log1p then z-score responses"]
-    NORM["Resize 512x512 RGBA<br/>normalize pixels to -1..1"]
-    CSV --> FIT
-    IMGS --> NORM
-    CSV --> NORM
-  end
+  dataLoad["Load results_master.csv + after-images<br/>from data/Abaqus_OUT"]
+  prep["Fit/apply ImpactTabularScaler<br/>params: z-score<br/>outputs: log1p then z-score<br/>images: 512x512 RGBA to -1..1"]
+  dataLoad --> prep
 
-  subgraph S2 [2. Training algorithm per batch]
-    BAT["Load batch: params, real I, y"]
-    Z["Sample z ~ N(0,I)"]
-    GFWD["G forward: fake I, pred y"]
-    DSTEP["Discriminator step<br/>L_D = 0.5 MSE real+fake"]
-    GSTEP["Generator step<br/>L_G = L_adv + 100 L1 + 10 SmoothL1"]
-    CLIP["Adam update + grad clip"]
-    CKPT["Every 20 epochs / end:<br/>save cGAN_generator.pth<br/>normalization_stats.json"]
-    BAT --> Z --> GFWD
-    GFWD --> DSTEP --> GSTEP --> CLIP
-    CLIP --> CKPT
-  end
+  trainPath["Train path"]
+  prep --> trainPath
+  batchIn["Batch: scaled params, real image I, scaled y"]
+  trainPath --> batchIn
+  sampleZ["Sample latent z ~ N(0, I_100)"]
+  batchIn --> sampleZ
+  gFwd["G forward: fake image + predicted numerics"]
+  sampleZ --> gFwd
+  gStep["Update G: adv MSE + 100 image L1 + 10 SmoothL1<br/>Adam + grad-norm clip 5"]
+  gFwd --> gStep
+  dStep["Update D: MSE on real vs fake<br/>params-conditioned; Adam + grad clip"]
+  gStep --> dStep
+  saveArt["Save generator checkpoint<br/>normalization_stats.json + config<br/>every 20 epochs and at end"]
+  dStep --> saveArt
 
-  subgraph S3 [3. Evaluation optional]
-    EVAL["scripts/evaluate.py<br/>SSIM, PSNR, R2 on holdout"]
-    CMP["scripts/compare.py<br/>side-by-side panels"]
-  end
+  evalOpt["Optional: evaluate.py / compare.py<br/>SSIM, PSNR, R2 and side-by-side vs GT"]
+  saveArt -.-> evalOpt
 
-  subgraph S4 [4. Prediction / inference]
-    LOAD["Load G + scaler"]
-    PIN["User params p"]
-    TSC["Standardize p"]
-    ZI["Sample z"]
-    GEN["G.eval forward"]
-    SAVE["Denormalize image to PNG<br/>inverse-transform scalars to CSV"]
-    LOAD --> PIN --> TSC --> GEN
-    ZI --> GEN --> SAVE
-  end
-
-  S1 --> S2
-  S2 --> S3
-  S2 --> S4
-  CKPT -.-> LOAD
+  inferPath["Infer path"]
+  saveArt -.-> inferPath
+  loadG["Load G + scaler"]
+  inferPath --> loadG
+  userP["User params p = v, r, x, y"]
+  loadG --> userP
+  normP["Normalize params with scaler"]
+  userP --> normP
+  zInf["Sample z"]
+  loadG --> zInf
+  genOut["G.eval: RGBA image + scaled numerics"]
+  normP --> genOut
+  zInf --> genOut
+  savePred["Inverse-transform numerics to physical units<br/>save PNG + CSV under results/predictions/"]
+  genOut --> savePred
 ```
 
-**Training sketch (diagram Train).** For each batch the code samples \(\mathbf{z}\), runs \(G\), updates \(D\) on real vs fake images (params-conditioned), then updates \(G\) with adversarial MSE, image L1, and SmoothL1 on scaled numerics. Defaults: Adam \(\mathrm{lr}=2\times10^{-4}\), \(\beta_1=0.5\), batch size 2, 150 epochs, grad-norm clip 5. Device order: CUDA, XPU, HIP, MPS, CPU. Artifacts land in `training_checkpoints/` and `logs/`.
+**Training path.** For each batch the code samples \(\mathbf{z}\), runs \(G\), updates \(G\) with adversarial MSE, image L1, and SmoothL1 on scaled numerics, then updates \(D\) on real vs fake images (params-conditioned). Defaults: Adam \(\mathrm{lr}=2\times10^{-4}\), \(\beta_1=0.5\), batch size 2, 150 epochs, grad-norm clip 5. Device order: CUDA, XPU, HIP, MPS, CPU. Scaler stats are written when fitted; generator weights and config land in `training_checkpoints/` with TensorBoard logs in `logs/`.
 
-**Inference sketch (diagram Infer).** Load `cGAN_generator.pth` and `normalization_stats.json`, standardize the four user parameters, sample \(\mathbf{z}\), run \(G\) in eval mode, write the RGBA image under `results/predictions/`, and inverse-transform the three scalars to physical units in a CSV.
+**Inference path.** Load `cGAN_generator.pth` and `normalization_stats.json`, standardize the four user parameters, sample \(\mathbf{z}\), run \(G\) in eval mode, write the RGBA image under `results/predictions/`, and inverse-transform the three scalars to physical units in a CSV.
 
 **Evaluation (optional).** After training, `scripts/evaluate.py` and `scripts/compare.py` score image metrics and numerical parity against Abaqus; they are not required for a single forward prediction.
 
