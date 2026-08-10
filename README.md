@@ -19,7 +19,7 @@ Trained weights are **not** shipped. Train locally or point scripts at your own 
 
 ## Method overview
 
-Full-order Abaqus impact runs are accurate but costly when many parameter combinations must be screened. Param2Image learns a conditional surrogate \(G\) that maps impact settings to a post-impact field image and three scalar FEA responses. After offline training on a finite simulation set, new queries run in milliseconds.
+Full-order Abaqus impact runs are accurate but costly when many parameter combinations must be screened. Param2Image learns a conditional surrogate $G$ that maps impact settings to a post-impact field image and three scalar FEA responses. After offline training on a finite simulation set, new queries run in milliseconds.
 
 The sections below follow the full path: **data and preprocessing → training loop → optional evaluation → prediction/inference**. Layer-level detail lives in [docs/ALGORITHM.md](docs/ALGORITHM.md).
 
@@ -27,20 +27,20 @@ The sections below follow the full path: **data and preprocessing → training l
 
 | Role | Quantity | Notes |
 |------|----------|--------|
-| Input | Projectile velocity \(v\) | m/s |
-| Input | Projectile radius \(r\) | mm |
-| Input | Impact location \((x,y)\) | mm |
-| Output | After-impact image \(\hat{\mathbf{I}}\) | RGBA, \(512\times 512\), values in \([-1,1]\) |
-| Output | Peak Mises \(\hat{\sigma}_{\mathrm{Mises}}\) | MPa |
-| Output | Peak PEEQ \(\hat{\varepsilon}_{\mathrm{PEEQ}}\) | dimensionless |
-| Output | Peak deflection \(\hat{\delta}\) | mm |
+| Input | Projectile velocity $v$ | m/s |
+| Input | Projectile radius $r$ | mm |
+| Input | Impact location $(x,y)$ | mm |
+| Output | After-impact image $\hat{\mathbf{I}}$ | RGBA, $512\times 512$, values in $[-1,1]$ |
+| Output | Peak Mises $\hat{\sigma}_{\mathrm{Mises}}$ | MPa |
+| Output | Peak PEEQ $\hat{\varepsilon}_{\mathrm{PEEQ}}$ | dimensionless |
+| Output | Peak deflection $\hat{\delta}$ | mm |
 
-With \(\mathbf{p}=(v,r,x,y)^\top\) and latent noise \(\mathbf{z}\sim\mathcal{N}(0,I_{100})\),
+With $\mathbf{p}=(v,r,x,y)^\top$ and latent noise $\mathbf{z}\sim\mathcal{N}(0,I_{100})$,
 
-\[
+$$
 \big(\hat{\mathbf{I}},\,\hat{\mathbf{y}}\big)=G(\mathbf{z},\,\tilde{\mathbf{p}}),\qquad
 \hat{\mathbf{y}}=(\hat{\sigma}_{\mathrm{Mises}},\,\hat{\varepsilon}_{\mathrm{PEEQ}},\,\hat{\delta}).
-\]
+$$
 
 ### End-to-end workflow
 
@@ -87,45 +87,45 @@ flowchart TB
   genOut --> savePred
 ```
 
-**Training path.** For each batch the code samples \(\mathbf{z}\), runs \(G\), updates \(G\) with adversarial MSE, image L1, and SmoothL1 on scaled numerics, then updates \(D\) on real vs fake images (params-conditioned). Defaults: Adam \(\mathrm{lr}=2\times10^{-4}\), \(\beta_1=0.5\), batch size 2, 150 epochs, grad-norm clip 5. Device order: CUDA, XPU, HIP, MPS, CPU. Scaler stats are written when fitted; generator weights and config land in `training_checkpoints/` with TensorBoard logs in `logs/`.
+**Training path.** For each batch the code samples $\mathbf{z}$, runs $G$, updates $G$ with adversarial MSE, image L1, and SmoothL1 on scaled numerics, then updates $D$ on real vs fake images (params-conditioned). Defaults: Adam $\mathrm{lr}=2\times10^{-4}$, $\beta_1=0.5$, batch size 2, 150 epochs, grad-norm clip 5. Device order: CUDA, XPU, HIP, MPS, CPU. Scaler stats are written when fitted; generator weights and config land in `training_checkpoints/` with TensorBoard logs in `logs/`.
 
-**Inference path.** Load `cGAN_generator.pth` and `normalization_stats.json`, standardize the four user parameters, sample \(\mathbf{z}\), run \(G\) in eval mode, write the RGBA image under `results/predictions/`, and inverse-transform the three scalars to physical units in a CSV.
+**Inference path.** Load `cGAN_generator.pth` and `normalization_stats.json`, standardize the four user parameters, sample $\mathbf{z}$, run $G$ in eval mode, write the RGBA image under `results/predictions/`, and inverse-transform the three scalars to physical units in a CSV.
 
 **Evaluation (optional).** After training, `scripts/evaluate.py` and `scripts/compare.py` score image metrics and numerical parity against Abaqus; they are not required for a single forward prediction.
 
 ### Generator and discriminator
 
-The generator is multi-modal. Latent noise and scaled parameters are concatenated, \(\mathbf{h}_0=[\mathbf{z};\,\tilde{\mathbf{p}}]\in\mathbb{R}^{104}\).
+The generator is multi-modal. Latent noise and scaled parameters are concatenated, $\mathbf{h}_0=[\mathbf{z};\,\tilde{\mathbf{p}}]\in\mathbb{R}^{104}$.
 
-- **Image head.** A linear layer forms a \(256\times 64\times 64\) feature volume, then three \(\times 2\) upsamples with convolutions yield \(512\times 512\) RGBA, followed by Tanh (\(64\to128\to256\to512\)).
+- **Image head.** A linear layer forms a $256\times 64\times 64$ feature volume, then three $\times 2$ upsamples with convolutions yield $512\times 512$ RGBA, followed by Tanh ($64\to128\to256\to512$).
 - **Numerical head.** Two modes are supported:
-  - `physics` (default for new training): MLP on \(\tilde{\mathbf{p}}\) only (deterministic scalars for a given impact case).
-  - `legacy`: MLP on \([\mathbf{z};\,\tilde{\mathbf{p}}]\) for older checkpoints. Loaders auto-detect the mode from weight shapes.
+  - `physics` (default for new training): MLP on $\tilde{\mathbf{p}}$ only (deterministic scalars for a given impact case).
+  - `legacy`: MLP on $[\mathbf{z};\,\tilde{\mathbf{p}}]$ for older checkpoints. Loaders auto-detect the mode from weight shapes.
 
-The discriminator \(D(\mathbf{I},\tilde{\mathbf{p}})\) embeds the four parameters to a small spatial map, upsamples it to \(512\times 512\), concatenates with the image, and applies five stride-2 conv blocks to a scalar validity logit (LSGAN-style; no sigmoid inside the network).
+The discriminator $D(\mathbf{I},\tilde{\mathbf{p}})$ embeds the four parameters to a small spatial map, upsamples it to $512\times 512$, concatenates with the image, and applies five stride-2 conv blocks to a scalar validity logit (LSGAN-style; no sigmoid inside the network).
 
 ### Objectives
 
-With real image \(\mathbf{I}\), fake image \(G_I\), scaled targets \(\tilde{\mathbf{y}}\), and MSE adversarial loss:
+With real image $\mathbf{I}$, fake image $G_I$, scaled targets $\tilde{\mathbf{y}}$, and MSE adversarial loss:
 
-\[
+$$
 \mathcal{L}_D=\tfrac{1}{2}\Big(\mathrm{MSE}\big(D(\mathbf{I},\tilde{\mathbf{p}}),1\big)+\mathrm{MSE}\big(D(G_I,\tilde{\mathbf{p}}),0\big)\Big),
-\]
+$$
 
-\[
+$$
 \mathcal{L}_G^{\mathrm{adv}}=\mathrm{MSE}\big(D(G_I,\tilde{\mathbf{p}}),1\big),\quad
 \mathcal{L}_G^{L1}=\|G_I-\mathbf{I}\|_1,\quad
 \mathcal{L}_G^{\mathrm{num}}=\mathrm{SmoothL1}_{\beta=0.5}(G_y,\tilde{\mathbf{y}}),
-\]
+$$
 
-\[
+$$
 \mathcal{L}_G=\mathcal{L}_G^{\mathrm{adv}}+\lambda_{L1}\mathcal{L}_G^{L1}+\lambda_{\mathrm{num}}\mathcal{L}_G^{\mathrm{num}},
 \qquad \lambda_{L1}=100,\;\lambda_{\mathrm{num}}=10.
-\]
+$$
 
 ### Tabular normalization
 
-Parameters use per-feature z-scores. Positive responses use \(\log(1+y)\) then z-scores. Images use channel-wise mean/std \(0.5\) so pixels lie in \([-1,1]\). Fitted statistics are saved as `normalization_stats.json` next to the generator weights and inverted at inference.
+Parameters use per-feature z-scores. Positive responses use $\log(1+y)$ then z-scores. Images use channel-wise mean/std $0.5$ so pixels lie in $[-1,1]$. Fitted statistics are saved as `normalization_stats.json` next to the generator weights and inverted at inference.
 
 Layer equations, head diagrams, and design notes: [docs/ALGORITHM.md](docs/ALGORITHM.md). CLI steps: [docs/WORKFLOWS.md](docs/WORKFLOWS.md).
 
