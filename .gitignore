@@ -1,26 +1,93 @@
-
-# Python
+# Byte-compiled / cache
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+*.egg
+.eggs/
+dist/
+build/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.ipynb_checkpoints/
 
-# IDEs and editors
-.vscode/
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# IDE / OS
 .idea/
-.vs/
-19. Project_19.code-workspace
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
 
-# Generated data and results
-/damage_analysis_results.csv
-/imagenet_classification_results.csv
-/ImageNet_Classified_Images/
-/Input_Images_To_Analyze/
-/Masks/
-/Predictions/
-/Processed_Images/
-/Processed_Images_UNET/
+# Training & model weights (train locally; do not push)
+training_checkpoints/*
+!training_checkpoints/.gitkeep
+!training_checkpoints/README.md
+*.pth
+*.pt
+*.ckpt
+*.onnx
+*.h5
+*.pkl
+*.joblib
 
-# Trained models (large binary files)
-/Trained_Models/
+# Generated experiment outputs (keep directory placeholders)
+results/*
+!results/.gitkeep
+!results/README.md
+!results/evaluation/
+!results/comparison/
+!results/analysis/
+!results/predictions/
+results/evaluation/*
+!results/evaluation/.gitkeep
+results/comparison/*
+!results/comparison/.gitkeep
+results/analysis/*
+!results/analysis/.gitkeep
+results/predictions/*
+!results/predictions/.gitkeep
+logs/*
+!logs/.gitkeep
 
-# Raw data (assuming it's managed elsewhere)
-/RAW_Images/
+# Legacy output folder names (pre-restructure)
+Evaluation_Results/
+Comparison_OUT/
+Analysis_Results/
+Prediction_OUT/
+
+# Data (external; place under data/Abaqus_OUT locally)
+data/*
+!data/.gitkeep
+!data/README.md
+**/Abaqus_OUT/
+
+# Large binaries / dumps
+*.pdf
+*.svg
+*.eps
+*.fig
+*.mp4
+*.mov
+*.avi
+*.zip
+*.7z
+*.tar
+*.gz
+*.npy
+*.npz
+*.h5ad
+
+# Env / secrets
+.env
+.env.*
+*.pem
+credentials.json

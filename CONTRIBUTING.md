@@ -1,41 +1,28 @@
-# Contributing to Project 19
+# Contributing
 
-We welcome contributions to Project 19! Please follow the guidelines below to ensure a smooth collaboration.
+Thanks for contributing to **Param2Image** (impact-simulation cGAN).
 
-## Setup Instructions
-1. **Fork the repository**: Click on the 'Fork' button at the top right corner of the repository page.
-2. **Clone your fork**: Run the following command in your terminal:
-   ```bash
-   git clone https://github.com/<your-username>/Project_19.git
-   ```
-3. **Install dependencies**: Navigate to the project directory and install the required dependencies:
-   ```bash
-   cd Project_19
-   pip install -r requirements.txt
-   ```
+## Scope
 
-## Pull Request Process
-1. **Create a new branch**: Always create a new branch for your feature or bug fix:
-   ```bash
-   git checkout -b my-feature-branch
-   ```
-2. **Commit your changes**: Make sure to commit your changes with a clear message:
-   ```bash
-   git commit -m "Add my new feature"
-   ```
-3. **Push to your branch**: Push your changes back to your fork:
-   ```bash
-   git push origin my-feature-branch
-   ```
-4. **Open a pull request**: Go to the original repository and open a pull request from your branch to the `master` branch.
+This repository contains the `p2i` package, training/inference CLIs, preprocessing, evaluation helpers, and documentation for a parameters-to-image surrogate of Abaqus impact runs.
 
-## Coding Standards
-- Follow the coding style used throughout the project. Consistency is key.
-- Write clear and concise comments in your code.
-- Ensure your code is properly formatted. You can use tools like Prettier for this purpose.
+## Guidelines
 
-## Bug Reporting
-- If you encounter a bug, please open an issue in the repository.
-- Provide a clear description of the bug, steps to reproduce it, and any relevant screenshots or logs.
+1. Keep PRs focused: package code, scripts, docs, tests, or lightweight CI, not trained weights or result dumps.
+2. Do **not** commit `*.pth` / `*.pt`, or contents of `results/`, `logs/`, or `data/Abaqus_OUT/`.
+3. Prefer repo-relative defaults (`./data/Abaqus_OUT`, `P2I_DATA_DIR`) over hard-coded machine paths.
+4. Import from `p2i` after `pip install -e .`; avoid `sys.path` hacks.
+5. Match existing Python style; avoid drive-by refactors.
+6. Open an issue for large design changes before implementing them.
 
-Thank you for contributing to Project 19!
+## Local checks
+
+```bash
+pip install -e .
+python -m py_compile src/p2i/*.py scripts/*.py
+python scripts/generate.py --help
+python scripts/evaluate.py --help
+python scripts/compare.py --help
+```
+
+GPU and full `Abaqus_OUT` data are not required for syntax checks.

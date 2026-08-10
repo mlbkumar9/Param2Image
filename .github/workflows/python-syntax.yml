@@ -1,0 +1,38 @@
+name: Python syntax check
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install package (editable)
+        run: pip install -e .
+
+      - name: Compile package and scripts
+        run: |
+          python -m py_compile \
+            src/p2i/__init__.py \
+            src/p2i/model.py \
+            src/p2i/data_loader.py \
+            src/p2i/preprocessing.py \
+            src/p2i/paths.py \
+            scripts/train.py \
+            scripts/generate.py \
+            scripts/evaluate.py \
+            scripts/compare.py \
+            scripts/analyze.py \
+            scripts/analyze_cpu.py \
+            scripts/_analyze_impl.py \
+            scripts/_analyze_cpu_impl.py
