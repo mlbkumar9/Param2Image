@@ -38,3 +38,10 @@ export P2I_DATA_DIR=/path/to/Abaqus_OUT
 ```
 
 Simulation images and CSVs are **not** shipped in this repository.
+
+## Abaqus_PS vs Abaqus_OUT
+
+- data/Abaqus_OUT/: preferred flat location for training/inference (RUN_* folders + tables). Point P2I_DATA_DIR here, or rely on p2i.paths.default_data_dir().
+- data/Abaqus_PS/: full parametric-study tree (autorun scripts + nested Abaqus_OUT/). Local-only; only data/Abaqus_PS/README.md is tracked. See that README for layout.
+
+You may symlink or copy Abaqus_PS/Abaqus_OUT to data/Abaqus_OUT if you want the package defaults to find the data without env vars.

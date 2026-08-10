@@ -91,3 +91,18 @@ data/*
 .env.*
 *.pem
 credentials.json
+
+
+# Local-only archives (not pushed)
+Legacy/
+Documentation/
+
+# Manim render outputs / local animation trees
+**/Manim_Animation/media/
+extras/Manim_Animation/
+
+# Abaqus_PS local dataset (keep README only)
+!data/Abaqus_PS/
+!data/Abaqus_PS/README.md
+data/Abaqus_PS/**
+!data/Abaqus_PS/README.md
