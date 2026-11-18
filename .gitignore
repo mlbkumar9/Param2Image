@@ -23,6 +23,10 @@ ENV/
 # IDE / OS
 .idea/
 .vscode/
+.cursor/
+.cursorrules
+.cursorignore
+*.code-workspace
 *.swp
 .DS_Store
 Thumbs.db
