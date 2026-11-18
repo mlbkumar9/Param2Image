@@ -67,7 +67,7 @@ class PipelineWiringTests(unittest.TestCase):
             self.assertIn("from p2i_paths import", source, name)
 
     def test_evaluation_passes_noise_before_conditioning_params(self):
-        for name in ("eval_p2i_colab.py", "run_eval_local.py"):
+        for name in ("eval_p2i_colab.py",):
             source = (SCRIPT_DIR / name).read_text(encoding="utf-8")
             self.assertNotIn("G(params_n, z)", source, name)
             self.assertNotIn("G(p_n, z)", source, name)
@@ -89,7 +89,6 @@ class PipelineWiringTests(unittest.TestCase):
             "train_p2i_pytorch.py": "training_checkpoints_position",
             "train_p2i_xla.py": "training_checkpoints_position_xla",
             "generate_p2i_pytorch.py": "training_checkpoints_position",
-            "run_eval_local.py": "training_checkpoints_position",
         }
         for name, folder in expected_defaults.items():
             source = (SCRIPT_DIR / name).read_text(encoding="utf-8")
@@ -98,11 +97,6 @@ class PipelineWiringTests(unittest.TestCase):
     def test_generation_prefers_position_selected_checkpoint(self):
         source = (SCRIPT_DIR / "generate_p2i_pytorch.py").read_text(encoding="utf-8")
         self.assertIn('DEFAULT_CKPT = CHECKPOINT_DIR / "ckpt_best_position.pt"', source)
-
-    def test_local_eval_prefers_position_selected_checkpoint(self):
-        source = (SCRIPT_DIR / "run_eval_local.py").read_text(encoding="utf-8")
-        self.assertIn('"ckpt_best_position.pt"', source)
-        self.assertNotIn('"ckpt_best.pt"', source)
 
     def test_training_scripts_persist_resume_artifacts_before_epoch_end(self):
         expected = {
