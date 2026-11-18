@@ -3,7 +3,7 @@ from pathlib import Path
 import os
 
 FORK_ROOT = Path(__file__).resolve().parent
-REPO_ROOT = FORK_ROOT.parents[1]  # forks/Train_v3 -> repo
+REPO_ROOT = FORK_ROOT.parents[1]  # phases/Train_v3 -> repo
 
 
 def data_dir() -> Path:

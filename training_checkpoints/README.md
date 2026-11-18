@@ -1,6 +1,6 @@
 # Training checkpoints
 
-Weights are produced locally by `scripts/train.py` and are **not** committed.
+Weights are produced locally by `phases/Train_v2/scripts/train.py` and are **not** committed.
 
 After a successful training run this folder typically contains:
 
@@ -13,7 +13,7 @@ After a successful training run this folder typically contains:
 Point inference / evaluation scripts at a checkpoint with `--model_path`, for example:
 
 ```bash
-python scripts/generate.py --model_path training_checkpoints/cGAN_generator.pth \
+python phases/Train_v2/scripts/generate.py --model_path training_checkpoints/cGAN_generator.pth \
   --velocity 120 --radius 5 --impact_x 0 --impact_y 0
 ```
 

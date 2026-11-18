@@ -12,7 +12,7 @@ pip install -r requirements.txt
 pip install -e .
 ```
 
-Place the dataset at `data/impact_dataset/` (see [data/README.md](../data/README.md)) or set `P2I_DATA_DIR`.
+Place the dataset at `data/impact_dataset/` (see [data/README.md](../../../data/README.md)) or set `P2I_DATA_DIR`.
 
 Trained weights are **not** in git. Train locally or point `--model_path` at your checkpoint.
 
@@ -21,7 +21,7 @@ Trained weights are **not** in git. Train locally or point `--model_path` at you
 ## 1. Train
 
 ```bash
-python scripts/train.py
+python phases/Train_v2/scripts/train.py
 ```
 
 Writes under `training_checkpoints/`:
@@ -41,14 +41,14 @@ tensorboard --logdir logs
 ## 2. Generate (single case)
 
 ```bash
-python scripts/generate.py ^
+python phases/Train_v2/scripts/generate.py ^
   --velocity 120 --radius 5 --impact_x 0 --impact_y 0
 ```
 
 Unix:
 
 ```bash
-python scripts/generate.py \
+python phases/Train_v2/scripts/generate.py \
   --velocity 120 --radius 5 --impact_x 0 --impact_y 0
 ```
 
@@ -61,13 +61,13 @@ Optional flags: `--model_path`, `--scaler_path`, `--output_dir`.
 ## 3. Evaluate
 
 ```bash
-python scripts/evaluate.py --num_samples 50
+python phases/Train_v2/scripts/evaluate.py --num_samples 50
 ```
 
 Custom data / weights:
 
 ```bash
-python scripts/evaluate.py --num_samples 50 ^
+python phases/Train_v2/scripts/evaluate.py --num_samples 50 ^
   --data_dir path\to\impact_dataset ^
   --model_path training_checkpoints\cGAN_generator.pth
 ```
@@ -79,7 +79,7 @@ Outputs: `results/evaluation/eval_<timestamp>/` (metrics CSVs, best/worst/random
 ## 4. Compare
 
 ```bash
-python scripts/compare.py --num_samples 6 --selection stratified
+python phases/Train_v2/scripts/compare.py --num_samples 6 --selection stratified
 ```
 
 Other selections: `random`, `tail`. Outputs under `results/comparison/comparison_<timestamp>/`.
@@ -91,13 +91,13 @@ Other selections: `random`, `tail`. Outputs under `results/comparison/comparison
 Full pipeline (needs torch + data + weights):
 
 ```bash
-python scripts/analyze.py
+python phases/Train_v2/scripts/analyze.py
 ```
 
 From existing evaluation CSVs only (CPU-friendly):
 
 ```bash
-python scripts/analyze_cpu.py
+python phases/Train_v2/scripts/analyze_cpu.py
 ```
 
 Outputs under `results/analysis/`.
@@ -106,7 +106,7 @@ Outputs under `results/analysis/`.
 
 ## 6. Notebook
 
-`notebooks/train_p2i.ipynb` is a Colab-oriented helper. For local work prefer `scripts/train.py` with `./data/impact_dataset`.
+`phases/Train_v2/notebooks/train_p2i.ipynb` is a Colab-oriented helper. For local work prefer `phases/Train_v2/scripts/train.py` with `./data/impact_dataset`.
 
 ---
 

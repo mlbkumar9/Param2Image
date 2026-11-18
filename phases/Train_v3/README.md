@@ -1,8 +1,8 @@
-# Train_v3 experimental fork
+# Train_v3 — current version
 
-This folder is an experimental Param2Image v3 fork (StyleGAN-lite generator, position supervision, optional XLA/TPU training). It lives on the train-v3 branch under forks/Train_v3/.
+Param2Image v3 (StyleGAN-lite generator, position supervision, optional XLA/TPU training). This is the current development phase and lives in `phases/Train_v3/`.
 
-The main package on master (src/p2i/ + scripts/) tracks the Train_v2-style cGAN workflow. Prefer master for day-to-day work unless you are iterating on v3 ideas.
+The earlier v2 phase (importable `p2i` package + CLI scripts) is kept under `phases/Train_v2/`.
 
 ## Paths (no machine-specific hardcodes)
 
@@ -24,7 +24,7 @@ Weights (*.pt / *.pth) stay local. JSON configs under training_checkpoints_posit
 
 ## Quick start
 
-    cd forks/Train_v3
+    cd phases/Train_v3
     # optional: set P2I_DATA_DIR to your Abaqus_OUT
     python train_p2i_pytorch.py
     python generate_p2i_pytorch.py --velocity 120 --radius 5 --impact_x 0 --impact_y 0

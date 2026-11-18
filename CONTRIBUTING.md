@@ -19,10 +19,10 @@ This repository contains the `p2i` package, training/inference CLIs, preprocessi
 
 ```bash
 pip install -e .
-python -m py_compile src/p2i/*.py scripts/*.py
-python scripts/generate.py --help
-python scripts/evaluate.py --help
-python scripts/compare.py --help
+python -m py_compile phases/Train_v2/src/p2i/*.py phases/Train_v2/scripts/*.py phases/Train_v3/*.py
+python phases/Train_v2/scripts/generate.py --help
+python phases/Train_v2/scripts/evaluate.py --help
+python phases/Train_v2/scripts/compare.py --help
 ```
 
 GPU is not required for syntax checks.

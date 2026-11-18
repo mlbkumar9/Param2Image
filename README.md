@@ -8,12 +8,23 @@
 
 Trained weights are **not** shipped. Train locally or point scripts at your own checkpoint.
 
+## Development phases
+
+The repository keeps each development phase side by side under `phases/`:
+
+| Phase | Path | Status |
+|-------|------|--------|
+| Train_v3 | [`phases/Train_v3/`](phases/Train_v3/) | Current — StyleGAN-lite generator, position supervision, optional XLA/TPU training at 1024x1024 |
+| Train_v2 | [`phases/Train_v2/`](phases/Train_v2/) | Earlier phase — original cGAN pipeline: importable `p2i` package + CLIs |
+
+Shared assets (`data/`, `results/`, `logs/`, `training_checkpoints/`) live at the repository root.
+
 ## Features
 
 - Conditional generator with convolutional image head + numerical head (`physics` or `legacy`)
 - Parameter-conditioned discriminator (LSGAN / MSE)
 - Tabular standardization with **log1p** response scaling (`ImpactTabularScaler`)
-- Train / generate / evaluate / compare / analyze CLIs under `scripts/`
+- Train / generate / evaluate / compare / analyze CLIs under `phases/Train_v2/scripts/`
 - Importable package `p2i` via `pip install -e .`
 - Results organized under `results/` (evaluation, comparison, analysis, predictions)
 
@@ -21,7 +32,7 @@ Trained weights are **not** shipped. Train locally or point scripts at your own 
 
 Full-order Abaqus impact runs are accurate but costly when many parameter combinations must be screened. Param2Image learns a conditional surrogate $G$ that maps impact settings to a post-impact field image and three scalar FEA responses. After offline training on a finite simulation set, new queries run in milliseconds.
 
-The sections below follow the full path: **data and preprocessing → training loop → optional evaluation → prediction/inference**. Layer-level detail lives in [docs/ALGORITHM.md](docs/ALGORITHM.md).
+The sections below describe the Train_v2 pipeline (see `phases/Train_v2/`); Train_v3 extends the same surrogate idea with a StyleGAN-lite generator and position supervision. They follow the full path: **data and preprocessing → training loop → optional evaluation → prediction/inference**. Layer-level detail lives in [phases/Train_v2/docs/ALGORITHM.md](phases/Train_v2/docs/ALGORITHM.md).
 
 ### Inputs and outputs
 
@@ -91,7 +102,7 @@ flowchart TB
 
 **Inference path.** Load `cGAN_generator.pth` and `normalization_stats.json`, standardize the four user parameters, sample $\mathbf{z}$, run $G$ in eval mode, write the RGBA image under `results/predictions/`, and inverse-transform the three scalars to physical units in a CSV.
 
-**Evaluation (optional).** After training, `scripts/evaluate.py` and `scripts/compare.py` score image metrics and numerical parity against Abaqus; they are not required for a single forward prediction.
+**Evaluation (optional).** After training, `phases/Train_v2/scripts/evaluate.py` and `phases/Train_v2/scripts/compare.py` score image metrics and numerical parity against Abaqus; they are not required for a single forward prediction.
 
 ### Generator and discriminator
 
@@ -127,12 +138,12 @@ $$
 
 Parameters use per-feature z-scores. Positive responses use $\log(1+y)$ then z-scores. Images use channel-wise mean/std $0.5$ so pixels lie in $[-1,1]$. Fitted statistics are saved as `normalization_stats.json` next to the generator weights and inverted at inference.
 
-Layer equations, head diagrams, and design notes: [docs/ALGORITHM.md](docs/ALGORITHM.md). CLI steps: [docs/WORKFLOWS.md](docs/WORKFLOWS.md).
+Layer equations, head diagrams, and design notes: [phases/Train_v2/docs/ALGORITHM.md](phases/Train_v2/docs/ALGORITHM.md). CLI steps: [phases/Train_v2/docs/WORKFLOWS.md](phases/Train_v2/docs/WORKFLOWS.md).
 
 ## Repository layout
 
 ```text
-Project_19/
+Param2Image/
 ├── README.md
 ├── LICENSE
 ├── CONTRIBUTING.md
@@ -141,23 +152,19 @@ Project_19/
 ├── pyproject.toml
 ├── requirements.txt
 ├── .github/workflows/
-├── docs/
-│   ├── ALGORITHM.md          # architecture, losses, math
-│   └── WORKFLOWS.md          # train → evaluate → compare → analyze
-├── src/p2i/                  # importable package
-│   ├── model.py
-│   ├── data_loader.py
-│   ├── preprocessing.py
-│   └── paths.py
-├── scripts/
-│   ├── train.py
-│   ├── generate.py
-│   ├── evaluate.py
-│   ├── compare.py
-│   ├── analyze.py
-│   └── analyze_cpu.py
-├── notebooks/
-│   └── train_p2i.ipynb
+├── phases/
+│   ├── Train_v3/             # current version (StyleGAN-lite, position supervision, XLA/TPU)
+│   │   ├── train_p2i_pytorch.py
+│   │   ├── train_p2i_xla.py
+│   │   ├── model_p2i_pytorch.py
+│   │   ├── position_supervision.py
+│   │   ├── eval_p2i_colab.py
+│   │   └── ...
+│   └── Train_v2/             # earlier phase (original cGAN pipeline)
+│       ├── src/p2i/          # importable package
+│       ├── scripts/          # train | generate | evaluate | compare | analyze
+│       ├── notebooks/        # train_p2i.ipynb
+│       └── docs/             # ALGORITHM.md | WORKFLOWS.md
 ├── data/                     # impact_dataset (CSV + images)
 ├── training_checkpoints/     # weights written here (not in git)
 └── results/                  # evaluation | comparison | analysis | predictions
@@ -190,25 +197,27 @@ Install a GPU build of PyTorch from [pytorch.org](https://pytorch.org) when avai
 ## Quickstart
 
 ```bash
-# Train
-python scripts/train.py
+# Train (Train_v2 pipeline)
+python phases/Train_v2/scripts/train.py
 
 # Generate one case
-python scripts/generate.py --velocity 120 --radius 5 --impact_x 0 --impact_y 0
+python phases/Train_v2/scripts/generate.py --velocity 120 --radius 5 --impact_x 0 --impact_y 0
 
 # Evaluate
-python scripts/evaluate.py --num_samples 50
+python phases/Train_v2/scripts/evaluate.py --num_samples 50
 
 # Compare
-python scripts/compare.py --num_samples 6 --selection stratified
+python phases/Train_v2/scripts/compare.py --num_samples 6 --selection stratified
 
 # Analyze
-python scripts/analyze.py
+python phases/Train_v2/scripts/analyze.py
 # or CPU-only from existing evaluation CSVs:
-python scripts/analyze_cpu.py
+python phases/Train_v2/scripts/analyze_cpu.py
 ```
 
-Step-by-step detail: **[docs/WORKFLOWS.md](docs/WORKFLOWS.md)**.
+For the current Train_v3 pipeline see [phases/Train_v3/README.md](phases/Train_v3/README.md).
+
+Step-by-step detail: **[phases/Train_v2/docs/WORKFLOWS.md](phases/Train_v2/docs/WORKFLOWS.md)**.
 
 ### Output locations
 

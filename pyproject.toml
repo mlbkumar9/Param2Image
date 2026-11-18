@@ -28,7 +28,7 @@ dependencies = [
 dev = ["pytest>=7.0"]
 
 [tool.setuptools.packages.find]
-where = ["src"]
+where = ["phases/Train_v2/src"]
 
 [tool.setuptools.package-dir]
-"" = "src"
+"" = "phases/Train_v2/src"
