@@ -60,7 +60,7 @@ Held-out test split, 604 cases, generator output averaged over 8 latent draws, s
 | Peak plastic strain (PEEQ) | 11.25 % | 0.811 | 0.066 |
 | Peak deflection | 9.45 % | 0.899 | 0.97 mm |
 
-**Impact location.** Median position error 0.99 mm (one third of an element); 79 % of cases are located to better than 3 mm. The same locator applied to the real fields has a floor of 1.1 mm.
+**Impact location.** Median position error 0.99 mm (one third of an element); 79 % of cases are located to better than 3 mm. The same locator applied to the real fields gives 0.91 mm at the median (1.1 mm mean), which bounds what the metric can resolve.
 
 **Cost.** Training: 4.85 h on one NVIDIA A100 (545 epochs, early stop). Inference: 0.6 s per case for one forward pass on four CPU cores, or about 5 s for the 8-draw estimate used above. Model size: 21.3 M parameters (generator 10.35 M, discriminator 9.36 M, physics head 1.59 M).
 
@@ -82,9 +82,9 @@ flowchart LR
   f --> d["Conditional PatchGAN<br/>discriminator (training only)"]
 ```
 
-**Generator.** A mapping MLP turns the standardised parameters and a 100-dimensional latent vector into a style vector *w*. A learned 25 x 25 constant is upsampled to 200 x 200 through residual blocks whose instance-normalised activations are modulated channel-wise by *w* (AdaIN). With spatial conditioning, maps of the offset from the strike point, the distance to it and the projectile footprint are projected and added to the features at every resolution, so the network does not have to infer position from a vector alone. Outputs are mapped to [-1, 1] per channel (linear for stress and mask, square root for strain and deflection) and inverted exactly at inference.
+**Generator.** A mapping MLP turns the standardised parameters and a 100-dimensional latent vector into a style vector *w*. A learned 25 x 25 constant is upsampled to 200 x 200 through residual blocks whose instance-normalised activations are modulated channel-wise by *w* (AdaIN). With spatial conditioning, maps of the offset from the strike point, the distance to it and the projectile footprint are projected and added to the features at every resolution, so the network does not have to infer position from a vector alone. Outputs are mapped to [-1, 1] per channel (linear for stress and mask, square root for strain and deflection) and inverted at inference; the mapping is exact within fixed channel caps (1200 MPa, strain 2.0, 60 mm deflection).
 
-**Physics head.** An independent residual MLP that maps the parameters to the mean and log-variance of the three peak responses. Its inputs are the four sampled parameters plus five derived quantities (the log and cube root of r³v², which is proportional to kinetic energy; the radial distance from the plate centre; the distance to the clamped edge; and v·r²). The mean is fitted with a Huber loss and the variance by a Gaussian negative log-likelihood on the detached residual, so learning the uncertainty does not pull the mean. The head trains for 100 epochs, is then frozen, and is checkpointed on its own validation loss.
+**Physics head.** An independent residual MLP that maps the parameters to the mean and log-variance of the three peak responses. Its inputs are the four sampled parameters plus five derived quantities (the log and cube root of r³v², which is proportional to kinetic energy; the radial distance from the plate centre; the distance to the clamped edge; and v·r²; with v in m/s). The mean is fitted with a Huber loss and the variance by a Gaussian negative log-likelihood on the detached residual, so learning the uncertainty does not pull the mean. The head trains for 100 epochs, is then frozen, and is checkpointed separately on its lowest validation error (mean MAPE of the three peaks).
 
 **Discriminator.** A spectral-normalised PatchGAN conditioned on the parameters, with a minibatch standard-deviation layer, trained on differentiably augmented inputs (colour jitter and cutout).
 
@@ -122,8 +122,10 @@ p2i-train --csv DATA/results_master.csv --pack DATA/fields_pack.npy \
 ```bash
 p2i-evaluate --csv DATA/results_master.csv --pack DATA/fields_pack.npy \
              --ckpt runs/v36/ckpt_best.pt --ckpt-phys runs/v36/ckpt_best_phys.pt \
-             --split test --out results/eval_test
+             --split test --smooth 0 --out results/eval_test
 ```
+
+`--smooth 0` scores against the unfiltered fields, as in the Results table. Without it the reference is filtered with the width recorded in the checkpoint (3 cells), which gives higher scores (SSIM 0.974 for the reported model).
 
 **Predict** a single impact case:
 
@@ -171,7 +173,7 @@ The simulations model a 600 x 600 x 5 mm Al 2024-T351 plate, clamped on all edge
 | Peak plastic strain | 0.063 to 1.88 |
 | Peak deflection | 0.77 to 45.7 mm |
 
-The 6040-simulation dataset is part of an ongoing study and is not distributed with this repository. [data/README.md](data/README.md) specifies the layout the code expects, so the pipeline can be run on your own simulations, and `data/verify_dataset.py` checks a dataset folder against it. The scripts in [`abaqus/`](abaqus/) generate such a dataset: `run_campaign.py` builds and solves the cases, and `extract_fields.py` reads each output database into a per-run field map.
+The 6040-simulation dataset is part of an ongoing study and is not distributed with this repository. [data/README.md](data/README.md) specifies the layout the code expects, so the pipeline can be run on your own simulations, and `data/verify_dataset.py` checks a complete dataset folder (including renders, solver logs and the mesh cache) against it. The scripts in [`abaqus/`](abaqus/) generate such a dataset: `run_campaign.py` builds and solves the cases, and `extract_fields.py` reads each output database into a per-run field map.
 
 ## Repository structure
 

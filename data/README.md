@@ -14,9 +14,14 @@ The 6040-simulation dataset used in the paper is not distributed. This page desc
     fields_pack.npy         (N, 4, 200, 200) float16, mapped to [-1, 1]
     fields_pack_index.csv   run_id per pack row, same order as the CSV
     fields/RUN_*.npz        per-run field maps in physical units (input to p2i-pack)
+    images/RUN_*_{before,after}.png   ABAQUS viewport renders (two per run)
+    logs/RUN_*.log          solver logs
+    mesh/plate_mesh.npz     the shared plate mesh
 ```
 
-`results_master.csv` needs at least: `run_id`, `split` (`train` / `val` / `test`), the inputs `velocity_kmh`, `proj_radius_mm`, `impact_x_mm`, `impact_y_mm`, the targets `max_mises_mpa`, `max_peeq`, `max_deflection_mm`, the flag `perforated`, and `field_npz` (path of the run's `.npz`, relative to the dataset folder).
+Training and evaluation read only `results_master.csv` and `fields_pack.npy` (or the per-run `.npz` files). The other items are part of the full dataset record and are checked by `verify_dataset.py`.
+
+`results_master.csv` needs at least: `run_id`, `split` (`train` / `val` / `test`), the inputs `velocity_kmh`, `proj_radius_mm`, `impact_x_mm`, `impact_y_mm`, the targets `max_mises_mpa`, `max_peeq`, `max_deflection_mm`, the flag `perforated`, and `field_npz` (path of the run's `.npz`, relative to the dataset folder). `verify_dataset.py` also expects `img_before` and `img_after` (render paths) and requires every split to contain both perforating and non-perforating runs.
 
 ## Field maps
 
