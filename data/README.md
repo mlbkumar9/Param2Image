@@ -1,40 +1,41 @@
-# Dataset layout
+# Data format
 
-Training and inference read from:
+The 6040-simulation dataset used in the paper is not distributed. This page describes the layout the code expects, so the pipeline can be run on other simulations.
+
+## Simulation setup (paper)
+
+600 x 600 x 5 mm Al 2024-T351 plate, clamped on all edges, struck normally by a rigid steel sphere. 240,000 C3D8R elements on a uniform 200 x 200 in-plane grid (3.000 mm per element, six layers through the thickness). Johnson-Cook plasticity and damage with element deletion, 2 ms step.
+
+## Dataset folder
 
 ```text
-data/impact_dataset/
-  results_master.csv
-  RUN_001/
-    ...
-  RUN_002/
-    ...
+<dataset>/
+    results_master.csv      one row per run
+    fields_pack.npy         (N, 4, 200, 200) float16, mapped to [-1, 1]
+    fields_pack_index.csv   run_id per pack row, same order as the CSV
+    fields/RUN_*.npz        per-run field maps in physical units (input to p2i-pack)
 ```
 
-## Required CSV columns
+`results_master.csv` needs at least: `run_id`, `split` (`train` / `val` / `test`), the inputs `velocity_kmh`, `proj_radius_mm`, `impact_x_mm`, `impact_y_mm`, the targets `max_mises_mpa`, `max_peeq`, `max_deflection_mm`, the flag `perforated`, and `field_npz` (path of the run's `.npz`, relative to the dataset folder).
 
-`results_master.csv` must include at least:
+## Field maps
 
-| Column | Role |
-|--------|------|
-| `run_id` | Sample identifier |
-| `velocity_ms` | Projectile velocity (m/s) |
-| `proj_radius_mm` | Projectile radius (mm) |
-| `impact_x_mm` | Impact X (mm) |
-| `impact_y_mm` | Impact Y (mm) |
-| `max_mises_mpa` | Max Mises stress (MPa) |
-| `max_peeq` | Max equivalent plastic strain |
-| `max_deflection_mm` | Max deflection (mm) |
-| `img_after` | Relative path to the post-impact RGBA/RGB image |
+Each `.npz` holds four 200 x 200 arrays on the element grid:
 
-Override the default path with:
+| key | field | unit |
+|---|---|---|
+| `mises` | von Mises stress | MPa |
+| `peeq` | equivalent plastic strain | - |
+| `u3` | out-of-plane deflection magnitude | mm |
+| `mask` | surviving material | 0/1 |
+
+`p2i-pack` maps them to [-1, 1] (linear on `mises` and `mask`, square root on `peeq` and `u3`; both invertible) and writes the pack. The pack is only valid under the mapping in `src/p2i/data.py`.
+
+`max_deflection_mm` is the peak abs(U3) over intact material, at least two cells (6 mm) from any damage front, so a one-cell rim at a hole boundary does not set the target.
+
+## Checking a dataset
 
 ```bash
-# PowerShell
-$env:P2I_DATA_DIR = "X:\path\to\impact_dataset"
-
-# bash
-export P2I_DATA_DIR=/path/to/impact_dataset
+python data/verify_dataset.py <dataset>          # structure, references, targets, pack pairing
+python data/verify_dataset.py <dataset> --full   # also opens every .npz
 ```
-
-`data/impact_dataset/` is shipped with this repository (CSV + images). Solver log files are ignored by git.

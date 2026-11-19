@@ -1,248 +1,94 @@
-# Param2Image: Impact Simulation cGAN (PyTorch)
+# Param2Image
 
-[![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
-[![PyTorch](https://img.shields.io/badge/PyTorch-2.1%2B-ee4c2c.svg)](https://pytorch.org/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+A conditional StyleGAN-lite surrogate for ABAQUS/Explicit projectile-impact simulations. From four impact parameters (velocity, projectile radius, strike position x and y) it predicts four physical fields on the plate's own finite-element grid, plus the three peak responses with their uncertainty.
 
-**Param2Image** is a multi-modal conditional GAN (cGAN) that acts as a fast surrogate for Abaqus impact simulations. From four impact parameters it predicts a post-impact **RGBA 512x512 image** together with three engineering scalars (peak Mises stress, peak PEEQ, and peak deflection), so you can explore design space without re-running full FEA for every case.
+This repository holds the model reported in the manuscript *Generative Deep Learning for Impact Simulations: A Conditional StyleGAN-Lite Framework for Parameter-to-Image Synthesis* (M. Behera, A.K. Sahu, V.K. Sutrakar, P.R. Budarapu; submitted to *Machine Learning with Applications*). It corresponds to internal version 3.6.
 
-Trained weights are **not** shipped. Train locally or point scripts at your own checkpoint.
+## What it predicts
 
-## Development phases
+| channel | field | unit |
+|---|---|---|
+| 0 | von Mises stress | MPa |
+| 1 | equivalent plastic strain (PEEQ) | - |
+| 2 | out-of-plane deflection, abs(U3) | mm |
+| 3 | surviving material (perforation mask) | 0/1 |
 
-The repository keeps each development phase side by side under `phases/`:
+Output is 200 x 200, one pixel per element at exactly 3.000 mm, so every pixel converts back to engineering units. A separate physics head predicts peak von Mises stress, peak PEEQ and peak deflection as a mean and a variance.
 
-| Phase | Path | Status |
-|-------|------|--------|
-| Train_v3 | [`phases/Train_v3/`](phases/Train_v3/) | Current — StyleGAN-lite generator, position supervision, optional XLA/TPU training at 1024x1024 |
-| Train_v2 | [`phases/Train_v2/`](phases/Train_v2/) | Earlier phase — original cGAN pipeline: importable `p2i` package + CLIs |
+## Results (held-out test split, 604 cases, 8 latent draws averaged)
 
-Shared assets (`data/`, `results/`, `logs/`, `training_checkpoints/`) live at the repository root.
+| metric | model | nearest-neighbour baseline | two simulations of the same impact |
+|---|---|---|---|
+| SSIM, all channels | **0.962** | 0.908 | 0.963 |
+| SSIM, von Mises | **0.897** | 0.765 | 0.897 |
+| impact position error, median | 0.99 mm | | 1.1 mm (locator floor, mean) |
 
-## Features
+| peak response | MAPE | R2 |
+|---|---|---|
+| von Mises stress | 2.3 % | 0.81 |
+| PEEQ | 11.3 % | 0.81 |
+| deflection | 9.45 % | 0.90 |
 
-- Conditional generator with convolutional image head + numerical head (`physics` or `legacy`)
-- Parameter-conditioned discriminator (LSGAN / MSE)
-- Tabular standardization with **log1p** response scaling (`ImpactTabularScaler`)
-- Train / generate / evaluate / compare / analyze CLIs under `phases/Train_v2/scripts/`
-- Importable package `p2i` via `pip install -e .`
-- Results organized under `results/` (evaluation, comparison, analysis, predictions)
+One forward pass takes about 0.6 s on four CPU cores, against a mean ABAQUS solve of 82.6 s on the same cores. Training took 4.85 h on one A100 (600-epoch budget, early stop at epoch 545, best validation SSIM at epoch 543).
 
-## Method overview
+## Method
 
-Full-order Abaqus impact runs are accurate but costly when many parameter combinations must be screened. Param2Image learns a conditional surrogate $G$ that maps impact settings to a post-impact field image and three scalar FEA responses. After offline training on a finite simulation set, new queries run in milliseconds.
+- **Generator.** A mapping MLP turns the standardised parameters and a 100-d latent into a style vector w. A learned 25 x 25 constant is upsampled through style-modulated residual blocks (AdaIN) to 200 x 200 x 4. Spatial conditioning adds a rendered map of the strike position and projectile footprint at every stage.
+- **Physics head.** A Fourier-feature residual MLP maps the parameters to the mean and log-variance of the three peak responses. The mean is fitted with a Huber loss and the variance by a Gaussian NLL on the detached residual, so the uncertainty does not pull the mean. It has its own optimiser, trains for the first 100 epochs and is checkpointed on its own validation loss (`ckpt_best_phys.pt`).
+- **Discriminator.** Spectral-normalised PatchGAN with parameter conditioning and a minibatch standard-deviation layer, trained with DiffAugment.
+- **Losses.** Non-saturating logistic GAN loss with lazy R1, channel-weighted L1 on the fields (weights 1.93, 0.63, 0.90, 0.53), a differentiable impact-position loss, and a soft-peak loss tying field maxima to the scalar targets. The training target is box-filtered over 3 cells; evaluation scores against the raw fields.
+- **Weights.** EMA of the generator, cosine learning rate with 5 warm-up epochs.
 
-The sections below describe the Train_v2 pipeline (see `phases/Train_v2/`); Train_v3 extends the same surrogate idea with a StyleGAN-lite generator and position supervision. They follow the full path: **data and preprocessing → training loop → optional evaluation → prediction/inference**. Layer-level detail lives in [phases/Train_v2/docs/ALGORITHM.md](phases/Train_v2/docs/ALGORITHM.md).
-
-### Inputs and outputs
-
-| Role | Quantity | Notes |
-|------|----------|--------|
-| Input | Projectile velocity $v$ | m/s |
-| Input | Projectile radius $r$ | mm |
-| Input | Impact location $(x,y)$ | mm |
-| Output | After-impact image $\hat{\mathbf{I}}$ | RGBA, $512\times 512$, values in $[-1,1]$ |
-| Output | Peak Mises $\hat{\sigma}_{\mathrm{Mises}}$ | MPa |
-| Output | Peak PEEQ $\hat{\varepsilon}_{\mathrm{PEEQ}}$ | dimensionless |
-| Output | Peak deflection $\hat{\delta}$ | mm |
-
-With $\mathbf{p}=(v,r,x,y)^\top$ and latent noise $\mathbf{z}\sim\mathcal{N}(0,I_{100})$,
-
-$$
-\big(\hat{\mathbf{I}},\,\hat{\mathbf{y}}\big)=G(\mathbf{z},\,\tilde{\mathbf{p}}),\qquad
-\hat{\mathbf{y}}=(\hat{\sigma}_{\mathrm{Mises}},\,\hat{\varepsilon}_{\mathrm{PEEQ}},\,\hat{\delta}).
-$$
-
-### End-to-end workflow
-
-The diagram below is the product path from Abaqus exports through training to a saved prediction. Training and inference share the same scaler statistics and generator weights. Solid arrows are the main data path; dashed arrows mark optional evaluation and the handoff into inference.
-
-```mermaid
-flowchart TB
-  dataLoad["Load results_master.csv + after-images<br/>from data/impact_dataset"]
-  prep["Fit/apply ImpactTabularScaler<br/>params: z-score<br/>outputs: log1p then z-score<br/>images: 512x512 RGBA to -1..1"]
-  dataLoad --> prep
-
-  trainPath["Train path"]
-  prep --> trainPath
-  batchIn["Batch: scaled params, real image I, scaled y"]
-  trainPath --> batchIn
-  sampleZ["Sample latent z ~ N(0, I_100)"]
-  batchIn --> sampleZ
-  gFwd["G forward: fake image + predicted numerics"]
-  sampleZ --> gFwd
-  gStep["Update G: adv MSE + 100 image L1 + 10 SmoothL1<br/>Adam + grad-norm clip 5"]
-  gFwd --> gStep
-  dStep["Update D: MSE on real vs fake<br/>params-conditioned; Adam + grad clip"]
-  gStep --> dStep
-  saveArt["Save generator checkpoint<br/>normalization_stats.json + config<br/>every 20 epochs and at end"]
-  dStep --> saveArt
-
-  evalOpt["Optional: evaluate.py / compare.py<br/>SSIM, PSNR, R2 and side-by-side vs GT"]
-  saveArt -.-> evalOpt
-
-  inferPath["Infer path"]
-  saveArt -.-> inferPath
-  loadG["Load G + scaler"]
-  inferPath --> loadG
-  userP["User params p = v, r, x, y"]
-  loadG --> userP
-  normP["Normalize params with scaler"]
-  userP --> normP
-  zInf["Sample z"]
-  loadG --> zInf
-  genOut["G.eval: RGBA image + scaled numerics"]
-  normP --> genOut
-  zInf --> genOut
-  savePred["Inverse-transform numerics to physical units<br/>save PNG + CSV under results/predictions/"]
-  genOut --> savePred
-```
-
-**Training path.** For each batch the code samples $\mathbf{z}$, runs $G$, updates $G$ with adversarial MSE, image L1, and SmoothL1 on scaled numerics, then updates $D$ on real vs fake images (params-conditioned). Defaults: Adam $\mathrm{lr}=2\times10^{-4}$, $\beta_1=0.5$, batch size 2, 150 epochs, grad-norm clip 5. Device order: CUDA, XPU, HIP, MPS, CPU. Scaler stats are written when fitted; generator weights and config land in `training_checkpoints/` with TensorBoard logs in `logs/`.
-
-**Inference path.** Load `cGAN_generator.pth` and `normalization_stats.json`, standardize the four user parameters, sample $\mathbf{z}$, run $G$ in eval mode, write the RGBA image under `results/predictions/`, and inverse-transform the three scalars to physical units in a CSV.
-
-**Evaluation (optional).** After training, `phases/Train_v2/scripts/evaluate.py` and `phases/Train_v2/scripts/compare.py` score image metrics and numerical parity against Abaqus; they are not required for a single forward prediction.
-
-### Generator and discriminator
-
-The generator is multi-modal. Latent noise and scaled parameters are concatenated, $\mathbf{h}_0=[\mathbf{z};\,\tilde{\mathbf{p}}]\in\mathbb{R}^{104}$.
-
-- **Image head.** A linear layer forms a $256\times 64\times 64$ feature volume, then three $\times 2$ upsamples with convolutions yield $512\times 512$ RGBA, followed by Tanh ($64\to128\to256\to512$).
-- **Numerical head.** Two modes are supported:
-  - `physics` (default for new training): MLP on $\tilde{\mathbf{p}}$ only (deterministic scalars for a given impact case).
-  - `legacy`: MLP on $[\mathbf{z};\,\tilde{\mathbf{p}}]$ for older checkpoints. Loaders auto-detect the mode from weight shapes.
-
-The discriminator $D(\mathbf{I},\tilde{\mathbf{p}})$ embeds the four parameters to a small spatial map, upsamples it to $512\times 512$, concatenates with the image, and applies five stride-2 conv blocks to a scalar validity logit (LSGAN-style; no sigmoid inside the network).
-
-### Objectives
-
-With real image $\mathbf{I}$, fake image $G_I$, scaled targets $\tilde{\mathbf{y}}$, and MSE adversarial loss:
-
-$$
-\mathcal{L}_D=\tfrac{1}{2}\Big(\mathrm{MSE}\big(D(\mathbf{I},\tilde{\mathbf{p}}),1\big)+\mathrm{MSE}\big(D(G_I,\tilde{\mathbf{p}}),0\big)\Big),
-$$
-
-$$
-\mathcal{L}_G^{\mathrm{adv}}=\mathrm{MSE}\big(D(G_I,\tilde{\mathbf{p}}),1\big),\quad
-\mathcal{L}_G^{L1}=\|G_I-\mathbf{I}\|_1,\quad
-\mathcal{L}_G^{\mathrm{num}}=\mathrm{SmoothL1}_{\beta=0.5}(G_y,\tilde{\mathbf{y}}),
-$$
-
-$$
-\mathcal{L}_G=\mathcal{L}_G^{\mathrm{adv}}+\lambda_{L1}\mathcal{L}_G^{L1}+\lambda_{\mathrm{num}}\mathcal{L}_G^{\mathrm{num}},
-\qquad \lambda_{L1}=100,\;\lambda_{\mathrm{num}}=10.
-$$
-
-### Tabular normalization
-
-Parameters use per-feature z-scores. Positive responses use $\log(1+y)$ then z-scores. Images use channel-wise mean/std $0.5$ so pixels lie in $[-1,1]$. Fitted statistics are saved as `normalization_stats.json` next to the generator weights and inverted at inference.
-
-Layer equations, head diagrams, and design notes: [phases/Train_v2/docs/ALGORITHM.md](phases/Train_v2/docs/ALGORITHM.md). CLI steps: [phases/Train_v2/docs/WORKFLOWS.md](phases/Train_v2/docs/WORKFLOWS.md).
-
-## Repository layout
-
-```text
-Param2Image/
-├── README.md
-├── LICENSE
-├── CONTRIBUTING.md
-├── SECURITY.md
-├── CODE_OF_CONDUCT.md
-├── pyproject.toml
-├── requirements.txt
-├── .github/workflows/
-├── phases/
-│   ├── Train_v3/             # current version (StyleGAN-lite, position supervision, XLA/TPU)
-│   │   ├── train_p2i_pytorch.py
-│   │   ├── train_p2i_xla.py
-│   │   ├── model_p2i_pytorch.py
-│   │   ├── position_supervision.py
-│   │   ├── eval_p2i_colab.py
-│   │   └── ...
-│   └── Train_v2/             # earlier phase (original cGAN pipeline)
-│       ├── src/p2i/          # importable package
-│       ├── scripts/          # train | generate | evaluate | compare | analyze
-│       ├── notebooks/        # train_p2i.ipynb
-│       └── docs/             # ALGORITHM.md | WORKFLOWS.md
-├── data/                     # impact_dataset (CSV + images)
-├── training_checkpoints/     # weights written here (not in git)
-└── results/                  # evaluation | comparison | analysis | predictions
-```
-
-## Dataset
-
-```text
-data/impact_dataset/
-  results_master.csv
-  RUN_001/
-  RUN_002/
-  ...
-```
-
-See [data/README.md](data/README.md). Override with `P2I_DATA_DIR` or `--data_dir` where supported.
-
-## Installation
+## Install
 
 ```bash
-python -m venv .venv
-# Windows: .venv\Scripts\activate
-# Unix:    source .venv/bin/activate
-pip install -r requirements.txt
-pip install -e .
+pip install -e .            # add .[dev] for the tests
 ```
 
-Install a GPU build of PyTorch from [pytorch.org](https://pytorch.org) when available.
+Install a CUDA build of PyTorch first if you have a GPU (https://pytorch.org).
 
-## Quickstart
+## Data
+
+The 6040-simulation dataset is part of an ongoing study and is not distributed. [data/README.md](data/README.md) gives the format the code expects (master CSV, packed field array, split) so the pipeline can run on your own simulations, and `data/verify_dataset.py` checks a dataset folder against it.
+
+## Usage
+
+Train with the reported configuration (all defaults):
 
 ```bash
-# Train (Train_v2 pipeline)
-python phases/Train_v2/scripts/train.py
-
-# Generate one case
-python phases/Train_v2/scripts/generate.py --velocity 120 --radius 5 --impact_x 0 --impact_y 0
-
-# Evaluate
-python phases/Train_v2/scripts/evaluate.py --num_samples 50
-
-# Compare
-python phases/Train_v2/scripts/compare.py --num_samples 6 --selection stratified
-
-# Analyze
-python phases/Train_v2/scripts/analyze.py
-# or CPU-only from existing evaluation CSVs:
-python phases/Train_v2/scripts/analyze_cpu.py
+p2i-train --csv DATA/results_master.csv --pack DATA/fields_pack.npy --out runs/v36 --cache-ram
 ```
 
-For the current Train_v3 pipeline see [phases/Train_v3/README.md](phases/Train_v3/README.md).
+Evaluate on the test split:
 
-Step-by-step detail: **[phases/Train_v2/docs/WORKFLOWS.md](phases/Train_v2/docs/WORKFLOWS.md)**.
+```bash
+p2i-evaluate --csv DATA/results_master.csv --pack DATA/fields_pack.npy \
+    --ckpt runs/v36/ckpt_best.pt --ckpt-phys runs/v36/ckpt_best_phys.pt \
+    --split test --out results/eval_test
+```
 
-### Output locations
+Predict one case:
 
-| Script | Default output |
-|--------|----------------|
-| `train.py` | `training_checkpoints/`, `logs/` |
-| `generate.py` | `results/predictions/` |
-| `evaluate.py` | `results/evaluation/` |
-| `compare.py` | `results/comparison/` |
-| `analyze*.py` | `results/analysis/` |
+```bash
+p2i-predict --ckpt runs/v36/ckpt_best.pt --ckpt-phys runs/v36/ckpt_best_phys.pt \
+    --velocity-kmh 300 --radius-mm 50 --x-mm 0 --y-mm 0 --out pred.npz --png
+```
 
-## Weights policy
+Each command also runs as `python -m p2i.<train|evaluate|predict|pack_dataset>`.
 
-- Do **not** commit `*.pth` / `*.pt` or bulky result dumps.
-- Train on your machine, or load via `--model_path`.
-- See [training_checkpoints/README.md](training_checkpoints/README.md).
+## Generating the dataset
 
-## Citation
+`abaqus/run_campaign.py` builds, meshes and solves the impact cases under ABAQUS Python; `abaqus/extract_fields.py` reads each ODB into a per-run `.npz` field map. `p2i-pack` then packs the maps into the training array.
 
-If you use this surrogate in academic work, please cite the repository and describe the Param2Image / Train_v2 cGAN pipeline (parameters → image + numerical FEA responses).
+## Layout
+
+```text
+src/p2i/      model, data pipeline, metrics, train / evaluate / predict / pack CLIs
+abaqus/       simulation campaign and field extraction (ABAQUS Python)
+data/         results_master.csv, pack index, dataset verifier
+tests/        CPU smoke tests
+```
 
 ## License
 
 MIT. See [LICENSE](LICENSE).
-
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md). Security notes: [SECURITY.md](SECURITY.md).
