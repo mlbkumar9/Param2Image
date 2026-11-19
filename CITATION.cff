@@ -1,0 +1,27 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "Param2Image: A Conditional StyleGAN-Lite Surrogate for Projectile-Impact Simulations"
+type: software
+version: 3.6.0
+date-released: 2026-11-19
+license: MIT
+repository-code: "https://github.com/mlbkumar9/Param2Image"
+authors:
+  - family-names: Behera
+    given-names: Mahendralal
+    affiliation: "School of Mechanical Sciences, Indian Institute of Technology Bhubaneswar"
+  - family-names: Sahu
+    given-names: Anil Kumar
+    affiliation: "School of Mechanical Sciences, Indian Institute of Technology Bhubaneswar"
+  - family-names: Sutrakar
+    given-names: Vijay Kumar
+    affiliation: "Aeronautical Development Establishment, Defence Research and Development Organisation"
+  - family-names: Budarapu
+    given-names: Pattabhi Ramaiah
+    affiliation: "School of Mechanical Sciences, Indian Institute of Technology Bhubaneswar"
+keywords:
+  - surrogate model
+  - conditional GAN
+  - StyleGAN
+  - finite element analysis
+  - impact simulation
