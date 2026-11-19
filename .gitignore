@@ -1,106 +1,36 @@
-# Byte-compiled / cache
+# Python
 __pycache__/
 *.py[cod]
-*$py.class
-*.so
-.Python
 *.egg-info/
-*.egg
-.eggs/
-dist/
 build/
-.mypy_cache/
+dist/
 .pytest_cache/
-.ruff_cache/
-.ipynb_checkpoints/
 
-# Virtual environments
+# Environments
 .venv/
 venv/
-env/
-ENV/
 
-# IDE / OS
-.idea/
-.vscode/
-*.code-workspace
-*.swp
+# Weights, runs, results
+*.pt
+*.pth
+runs/
+results/
+
+# Data is not distributed
+data/*.csv
+data/*.npy
+data/*.npz
+*.npy
+!tests/**/*.npy
+
+# OS / editor
 .DS_Store
 Thumbs.db
+.idea/
+.vscode/
 
-# Training & model weights (train locally; do not push)
-training_checkpoints/*
-!training_checkpoints/.gitkeep
-!training_checkpoints/README.md
-*.pth
-*.pt
-*.ckpt
-*.onnx
-*.h5
-*.pkl
-*.joblib
-
-# Generated experiment outputs (keep directory placeholders)
-results/*
-!results/.gitkeep
-!results/README.md
-!results/evaluation/
-!results/comparison/
-!results/analysis/
-!results/predictions/
-results/evaluation/*
-!results/evaluation/.gitkeep
-results/comparison/*
-!results/comparison/.gitkeep
-results/analysis/*
-!results/analysis/.gitkeep
-results/predictions/*
-!results/predictions/.gitkeep
-logs/*
-!logs/.gitkeep
-
-# Legacy output folder names (pre-restructure)
-Evaluation_Results/
-Comparison_OUT/
-Analysis_Results/
-Prediction_OUT/
-
-# Data: track impact_dataset (CSV + images); ignore solver logs
-data/*
-!data/.gitkeep
-!data/README.md
-!data/impact_dataset/
-!data/impact_dataset/**
-data/impact_dataset/**/*.log
-**/Abaqus_OUT/
-
-# Large binaries / dumps (dataset PNGs are under data/impact_dataset and tracked)
-*.pdf
-*.svg
-*.eps
-*.fig
-*.mp4
-*.mov
-*.avi
-*.zip
-*.7z
-*.tar
-*.gz
-*.npy
-*.npz
-*.h5ad
-
-# Env / secrets
-.env
-.env.*
-*.pem
-credentials.json
-
-
-# Local-only archives (not pushed)
-Legacy/
+# Local-only working folders
+data/*/
+colab/
 Documentation/
-
-# Manim render outputs / local animation trees
-**/Manim_Animation/media/
-extras/Manim_Animation/
+archive/

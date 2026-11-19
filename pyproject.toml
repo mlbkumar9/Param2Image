@@ -4,31 +4,31 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "p2i"
-version = "0.1.0"
-description = "Param2Image: conditional GAN surrogate for Abaqus impact simulations"
+version = "3.6.0"
+description = "Param2Image: conditional GAN surrogate that predicts Abaqus impact field maps from four impact parameters"
 readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.10"
-authors = [{ name = "Param2Image contributors" }]
 dependencies = [
-  "torch>=2.1.0",
-  "torchvision>=0.16.0",
-  "pandas>=2.0.0",
-  "numpy>=1.24.0",
-  "Pillow>=10.0.0",
-  "matplotlib>=3.7.0",
-  "scikit-image>=0.21.0",
-  "scipy>=1.11.0",
-  "tqdm>=4.66.0",
-  "seaborn>=0.13.0",
-  "tensorboard>=2.14.0",
+  "torch>=2.1",
+  "numpy",
+  "pandas",
+  "scipy",
+  "matplotlib",
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=7.0"]
+dev = ["pytest"]
+fid = ["torchvision"]   # only for the FID/KID scores in p2i.evaluate
+
+[project.scripts]
+p2i-train = "p2i.train:main"
+p2i-evaluate = "p2i.evaluate:main"
+p2i-predict = "p2i.predict:main"
+p2i-pack = "p2i.pack_dataset:main"
 
 [tool.setuptools.packages.find]
-where = ["phases/Train_v2/src"]
+where = ["src"]
 
-[tool.setuptools.package-dir]
-"" = "phases/Train_v2/src"
+[tool.pytest.ini_options]
+testpaths = ["tests"]
