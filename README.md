@@ -230,4 +230,4 @@ Released under the [MIT License](LICENSE).
 
 ## Acknowledgements
 
-This work was carried out at the School of Mechanical Sciences, Indian Institute of Technology Bhubaneswar, and was supported by the Aeronautical Development Establishment, Defence Research and Development Organisation, Bengaluru, India (grant ADE/PPA/14923/CARS/25-26/06).
+This work was carried out at the School of Mechanical Sciences, Indian Institute of Technology Bhubaneswar, and was supported by the Aeronautical Development Establishment, Defence Research and Development Organisation, Bengaluru, India.
