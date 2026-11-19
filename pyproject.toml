@@ -9,12 +9,7 @@ description = "Param2Image: conditional GAN surrogate that predicts Abaqus impac
 readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.10"
-authors = [
-  { name = "Mahendralal Behera" },
-  { name = "Anil Kumar Sahu" },
-  { name = "Vijay Kumar Sutrakar" },
-  { name = "Pattabhi Ramaiah Budarapu" },
-]
+authors = [{ name = "Mahendralal Behera" }]
 keywords = ["surrogate model", "conditional GAN", "StyleGAN", "finite element", "impact simulation"]
 classifiers = [
   "Programming Language :: Python :: 3",
