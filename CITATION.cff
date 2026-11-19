@@ -10,15 +10,6 @@ authors:
   - family-names: Behera
     given-names: Mahendralal
     affiliation: "School of Mechanical Sciences, Indian Institute of Technology Bhubaneswar"
-  - family-names: Sahu
-    given-names: Anil Kumar
-    affiliation: "School of Mechanical Sciences, Indian Institute of Technology Bhubaneswar"
-  - family-names: Sutrakar
-    given-names: Vijay Kumar
-    affiliation: "Aeronautical Development Establishment, Defence Research and Development Organisation"
-  - family-names: Budarapu
-    given-names: Pattabhi Ramaiah
-    affiliation: "School of Mechanical Sciences, Indian Institute of Technology Bhubaneswar"
 keywords:
   - surrogate model
   - conditional GAN

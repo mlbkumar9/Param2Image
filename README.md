@@ -29,6 +29,7 @@ This repository contains the model reported in the manuscript *Generative Deep L
 - [Testing](#testing)
 - [Citation](#citation)
 - [Contributing](#contributing)
+- [Author](#author)
 - [License](#license)
 - [Acknowledgements](#acknowledgements)
 
@@ -205,7 +206,7 @@ If you use this code, please cite the repository (see [CITATION.cff](CITATION.cf
 
 ```bibtex
 @software{param2image,
-  author  = {Behera, Mahendralal and Sahu, Anil Kumar and Sutrakar, Vijay Kumar and Budarapu, Pattabhi Ramaiah},
+  author  = {Behera, Mahendralal},
   title   = {Param2Image: A Conditional StyleGAN-Lite Surrogate for Projectile-Impact Simulations},
   version = {3.6.0},
   year    = {2026},
@@ -218,6 +219,10 @@ A citation for the journal article will be added once it is published.
 ## Contributing
 
 Bug reports and pull requests are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) first and follow the [Code of Conduct](CODE_OF_CONDUCT.md). Security issues should be reported privately as described in [SECURITY.md](SECURITY.md).
+
+## Author
+
+Developed and maintained by Mahendralal Behera ([@mlbkumar9](https://github.com/mlbkumar9)).
 
 ## License
 
